@@ -1,15 +1,20 @@
 document.addEventListener("DOMContentLoaded", () => {
   const config = window.OMNI_CONFIG || {};
+
+  // Mobile navigation
   const menuToggle = document.getElementById("menuToggle");
   const mainNav = document.getElementById("mainNav");
 
-  // Mobile navigation
   if (menuToggle && mainNav) {
     menuToggle.addEventListener("click", () => {
       const isOpen = mainNav.classList.toggle("open");
       menuToggle.setAttribute("aria-expanded", String(isOpen));
-      menuToggle.setAttribute("aria-label", isOpen ? "Close navigation" : "Open navigation");
+      menuToggle.setAttribute(
+        "aria-label",
+        isOpen ? "Close navigation" : "Open navigation"
+      );
     });
+
     mainNav.querySelectorAll("a").forEach(link => {
       link.addEventListener("click", () => {
         mainNav.classList.remove("open");
@@ -18,56 +23,77 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Current year in footer
+  // Footer year
   const year = document.getElementById("currentYear");
   if (year) year.textContent = new Date().getFullYear();
 
   // Portfolio filters
   const filterButtons = document.querySelectorAll(".filter-button");
   const portfolioItems = document.querySelectorAll(".portfolio-item");
+
   filterButtons.forEach(button => {
     button.addEventListener("click", () => {
       const filter = button.dataset.filter;
+
       filterButtons.forEach(item => item.classList.remove("active"));
       button.classList.add("active");
+
       portfolioItems.forEach(item => {
-        const shouldShow = filter === "all" || item.dataset.category === filter;
-        item.classList.toggle("is-hidden", !shouldShow);
+        const show =
+          filter === "all" || item.dataset.category === filter;
+
+        item.classList.toggle("is-hidden", !show);
       });
     });
   });
 
-  // Prefill service when a service card enquiry link is clicked
+  // Service enquiry links
   document.querySelectorAll("[data-service]").forEach(link => {
     link.addEventListener("click", () => {
       const serviceSelect = document.getElementById("serviceType");
+
       if (serviceSelect) {
         const wanted = link.dataset.service;
-        const matchingOption = Array.from(serviceSelect.options).find(option => option.text === wanted);
-        if (matchingOption) serviceSelect.value = matchingOption.value;
+
+        const option = Array.from(serviceSelect.options).find(
+          item => item.text.trim() === wanted.trim()
+        );
+
+        if (option) serviceSelect.value = option.value;
       }
     });
   });
 
-  // WhatsApp enquiry form
+  // WhatsApp configuration
+  const whatsapp = String(config.whatsappNumber || "").replace(/\D/g, "");
+  const validWhatsApp = /^\d{10,15}$/.test(whatsapp);
+
+  // Enquiry form
   const form = document.getElementById("quoteForm");
   const note = document.getElementById("formNote");
-  const whatsapp = String(config.whatsappNumber || "").replace(/\D/g, "");
-  const validWhatsApp = /^\d{10,15}$/.test(whatsapp) && !whatsapp.includes("XXXXXXXX");
 
   if (form) {
     form.addEventListener("submit", event => {
       event.preventDefault();
+
       if (!validWhatsApp) {
         if (note) {
-          note.textContent = "Before launch, add your real WhatsApp number in config.js (international format, e.g. 2567XXXXXXXX).";
+          note.textContent =
+            "The business WhatsApp number is not configured correctly.";
           note.classList.add("form-error");
         }
-        alert("The website owner needs to add the business WhatsApp number in config.js before enquiries can be sent.");
+
+        alert("Please contact the website owner about the WhatsApp number.");
+        return;
+      }
+
+      if (!form.checkValidity()) {
+        form.reportValidity();
         return;
       }
 
       const data = new FormData(form);
+
       const message = [
         "Hello Omni Creative Print and Branding Limited,",
         "",
@@ -80,58 +106,67 @@ document.addEventListener("DOMContentLoaded", () => {
         "Thank you."
       ].join("\n");
 
-      const url = "https://wa.me/" + whatsapp + "?text=" + encodeURIComponent(message);
-      window.open(url, "_blank", "noopener,noreferrer");
+      const whatsappURL =
+        "https://wa.me/" + whatsapp + "?text=" +
+        encodeURIComponent(message);
+
       if (note) {
-        note.textContent = "WhatsApp has opened with your enquiry. Review the message and press Send.";
+        note.textContent =
+          "Opening WhatsApp. Please review your enquiry and press Send.";
         note.classList.remove("form-error");
       }
+
+      // Navigate directly to WhatsApp to avoid mobile popup blocking
+      window.location.href = whatsappURL;
     });
   }
 
-
-  // Display business contact details from config.js when they are configured
+  // Business phone / WhatsApp link
   const phoneLink = document.getElementById("businessPhone");
+  const phoneNumbers = Array.isArray(config.phoneNumbers)
+    ? config.phoneNumbers
+    : [];
+
   if (phoneLink && validWhatsApp) {
     phoneLink.href = "https://wa.me/" + whatsapp;
     phoneLink.target = "_blank";
     phoneLink.rel = "noopener noreferrer";
-    phoneLink.textContent = "WhatsApp: +" + whatsapp;
+    phoneLink.textContent =
+      "WhatsApp: +" + whatsapp;
   }
 
+  // Business email link
   const emailLink = document.getElementById("businessEmail");
   const email = String(config.emailAddress || "").trim();
-  if (emailLink && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) && !email.includes("example.com")) {
+
+  if (
+    emailLink &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) {
     emailLink.href = "mailto:" + email;
     emailLink.textContent = email;
   }
 
-  // Business contact details from config.js
-  const phoneLink = document.getElementById("businessPhone");
-  const phoneNumbers = Array.isArray(config.phoneNumbers) ? config.phoneNumbers : [];
+  // Display contact numbers
   if (phoneLink && phoneNumbers.length) {
-    phoneLink.href = "tel:" + phoneNumbers[0].replace(/[^+\\d]/g, "");
-    phoneLink.textContent = "Contacts: " + phoneNumbers.join(" · ");
-  }
-  const emailLink = document.getElementById("businessEmail");
-  if (emailLink && config.emailAddress) {
-    emailLink.href = "mailto:" + config.emailAddress;
-    emailLink.textContent = config.emailAddress;
+    phoneLink.href = "https://wa.me/" + whatsapp;
+    phoneLink.textContent =
+      "Contacts: " + phoneNumbers.join(" · ");
   }
 
-  // Floating WhatsApp shortcut
-  const floatingWhatsApp = document.getElementById("floatingWhatsApp");
+  // Floating WhatsApp button
+  const floatingWhatsApp =
+    document.getElementById("floatingWhatsApp");
+
   if (floatingWhatsApp) {
     if (validWhatsApp) {
-      floatingWhatsApp.href = "https://wa.me/" + whatsapp;
+      floatingWhatsApp.href =
+        "https://wa.me/" + whatsapp;
+
       floatingWhatsApp.target = "_blank";
       floatingWhatsApp.rel = "noopener noreferrer";
     } else {
       floatingWhatsApp.href = "#quote";
-      floatingWhatsApp.addEventListener("click", event => {
-        event.preventDefault();
-        document.getElementById("quote")?.scrollIntoView({ behavior: "smooth" });
-      });
     }
   }
 });
